@@ -141,6 +141,33 @@ app.post('/api/payments/add', (req, res) => {
         res.status(201).json({ message: "Payment logged", id: result.insertId });
     });
 });
+// --- REPORTING ROUTE ---
+app.get('/api/reports/full-history', (req, res) => {
+    const sql = `
+        SELECT 
+            sr.record_number,
+            c.plate_number,
+            c.model,
+            c.mechanic_name,
+            s.service_name,
+            s.service_price,
+            p.amount_paid,
+            (s.service_price - IFNULL(p.amount_paid, 0)) AS balance,
+            sr.service_date,
+            sr.description
+        FROM service_records sr
+        JOIN services s ON sr.service_id = s.service_id
+        JOIN payments p ON sr.record_id = p.record_id
+        JOIN cars c ON p.car_id = c.car_id
+        ORDER BY sr.service_date DESC
+    `;
+
+    db.query(sql, (err, data) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(data);
+    });
+});
+
 
 app.listen(port, () => {
     console.log(`🚀 Server running at http://localhost:${port}`);
